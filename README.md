@@ -1,9 +1,15 @@
+<div align="center">
+
 # p4lantir
+
+![](https://raw.githubusercontent.com/acmo0/p4lantir/main/imgs/logo.svg)
+
 
 ![PyPI - Version](https://img.shields.io/pypi/v/p4lantir?style=plastic)
 ![PyPI - License](https://img.shields.io/pypi/l/p4lantir)
 ![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Facmo0%2Fp4lantir%2Fmain%2Fpyproject.toml)
 
+</div>
 
 ***
 
