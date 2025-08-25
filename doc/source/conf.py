@@ -9,7 +9,7 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path('..', '..').resolve()))
+sys.path.insert(0, str(Path('..', '../src/').resolve()))
 
 project = 'p4lantir'
 copyright = '2025, acmo0'
@@ -28,21 +28,41 @@ extensions = [
 	'sphinx.ext.intersphinx',
 	'sphinx.ext.viewcode',
 	'sphinx.ext.githubpages',
-	'sphinx_copybutton'
+	'sphinx_copybutton',
+	'sphinx_multiversion',
 ]
 
+# smv_tag_whitelist = r'\d+\.\d+\.\d+.*$|latest'
+# # Whitelist pattern for branches (set to '' to ignore all branches)
+# smv_branch_whitelist = ''
+# smv_released_pattern = r'v.*'
+# smv_latest_version = 'v0.1'
+# smv_remote_whitelist = None
 
 templates_path = ['_templates']
+html_sidebars = {
+    '**': [
+        'versioning.html',
+    ],
+}
 exclude_patterns = []
 
 language = 'en'
+
+
+
+# Versioning setup
+smv_tag_whitelist = r'^.*$'
+smv_branch_whitelist = "dev-doc"
+smv_outputdir_format = '{ref.name}'
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
-
+html_logo = "../../imgs/logo.svg"
 autodoc_member_order = "bysource"
 autodoc_preserve_defaults = True
 
@@ -54,7 +74,7 @@ highlight_options = {
 html_static_path = ['_static']
 
 html_theme_options = {
-    'logo_only': False,
+    'logo_only': True,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
     'vcs_pageview_mode': '',
@@ -67,3 +87,4 @@ html_theme_options = {
     'includehidden': True,
     'titles_only': False
 }
+

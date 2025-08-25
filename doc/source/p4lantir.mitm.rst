@@ -1,10 +1,11 @@
-Module p4lantir.mitm
-======================
+p4lantir.mitm submodule
+=======================
 
-Module content
---------------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 2
+   :caption: Content:
 
-.. automodule:: p4lantir.mitm
-   :members:
-   :show-inheritance:
-   :undoc-members:
+   p4lantir.mitm.mitm_utils
+   p4lantir.mitm.proxy_server
+

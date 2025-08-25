@@ -12,4 +12,5 @@ Documentation of the **p4lantir**'s source code.
    installation
    structure
    modules
+   exemples
    

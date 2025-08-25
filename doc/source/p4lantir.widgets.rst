@@ -1,10 +1,13 @@
-Module p4lantir.widgets
-=======================
+p4lantir.widgets submodule
+==========================
 
-Module content
---------------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 2
+   :caption: Content:
 
-.. automodule:: p4lantir.widgets
-   :members:
-   :show-inheritance:
-   :undoc-members:
+   p4lantir.widgets.app_ui
+   p4lantir.widgets.enter_screen
+   p4lantir.widgets.logger
+   
+
