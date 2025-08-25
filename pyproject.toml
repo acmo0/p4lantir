@@ -74,4 +74,6 @@ build-backend = "hatchling.build"
 exclude = [
   "/venv",
   "__pycache__",
+  "/dist",
+  "/doc"
 ]
