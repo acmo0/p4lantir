@@ -52,6 +52,8 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
 
   create-release:
+    needs:
+    - build
     runs-on: ubuntu-latest
     name: Publish artifacts to a new release
     if: startsWith(github.ref, 'refs/tags/')
