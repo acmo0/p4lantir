@@ -50,3 +50,14 @@ jobs:
         path: dist/
     - name: Publish distribution  to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+
+  create-release:
+    name: Publish artifacts to a new release
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Release with Notes
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
