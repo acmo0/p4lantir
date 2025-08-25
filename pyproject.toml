@@ -1,6 +1,6 @@
 [project]
 name = "p4lantir"
-version = "1.0.1-b"
+version = "1.0.1"
 description = "MiTM over TCP to intercept and manipulate flow"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.9"
