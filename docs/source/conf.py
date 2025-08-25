@@ -49,7 +49,7 @@ language = 'en'
 
 # Versioning setup
 smv_tag_whitelist = r'^.*$'
-smv_branch_whitelist = "dev-doc"
+smv_branch_whitelist = "dev-doc|main"
 smv_outputdir_format = '{ref.name}'
 
 
