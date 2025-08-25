@@ -45,6 +45,8 @@ source venv/bin/activate
 pip install p4lantir
 ```
 
+> Note : the package can also be downloaded from the release and installed using the `.whl` file and `pip`.
+
 ## Usage
 > [!WARNING]
 > You need to run the script as root due to arpspoof and iptables. You should open a shell as root, activate the venv and then use *p4lantir*.
