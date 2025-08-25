@@ -1,8 +1,9 @@
 # p4lantir
 
-[![PyPI version](https://img.shields.io/pypi/v/mkdocs-badges)](https://pypi.org/project/p4lantir/)
-![License](https://img.shields.io/pypi/l/p4lantir)
-![Python versions](https://img.shields.io/pypi/pyversions/p4lantir)
+![PyPI - Version](https://img.shields.io/pypi/v/p4lantir?style=plastic)
+![PyPI - License](https://img.shields.io/pypi/l/p4lantir)
+![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Facmo0%2Fp4lantir%2Fmain%2Fpyproject.toml)
+
 
 ***
 
