@@ -1,5 +1,5 @@
-p4lantir
-========
+Introduction
+============
 
 
 **p4lantir** is a simple tool to perform Man-in-the-Middle over TCP using ARP spoofing, allowing to intercept, drop, forward and see TCP flows.
