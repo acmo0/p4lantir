@@ -22,6 +22,14 @@ This project is intended to be relatively simple, making simple future contribut
 
 ***
 
+## Screenshots
+
+![p4lantir-screen1](https://raw.githubusercontent.com/acmo0/p4lantir/main/imgs/screenshot-1.png)
+![p4lantir-screen2](https://raw.githubusercontent.com/acmo0/p4lantir/main/imgs/screenshot-2.png)
+![p4lantir-screen3](https://raw.githubusercontent.com/acmo0/p4lantir/main/imgs/screenshot-3.png)
+![p4lantir-screen4](https://raw.githubusercontent.com/acmo0/p4lantir/main/imgs/screenshot-4.png)
+
+
 ## Installation
 - Install the system dependencies (arpspoof, iptables)
 - Create python virtual environnement
