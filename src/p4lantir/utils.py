@@ -32,7 +32,7 @@ def setup_logger(logger: logging.Logger,  level=logging.INFO) -> RichLog:
     logger.addHandler(term_handler)
 
     # Handler for file
-    file_handler = logging.FileHandler(f'{CONFIG["name"]}-{int(time.time())}.log')
+    file_handler = logging.FileHandler(f'{CONFIG["NAME"]}-{int(time.time())}.log')
     formatter = logging.Formatter(fmt=CONFIG["LOG_FORMAT_FILE"])
 
     file_handler.setFormatter(formatter)

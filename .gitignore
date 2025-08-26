@@ -4,3 +4,4 @@ venv/
 uv.lock
 dist/
 **/build/
+**/p4lantir-*.log

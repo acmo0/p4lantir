@@ -65,7 +65,6 @@ class Server(socketserver.BaseRequestHandler):
         self.socket.setblocking(0)
 
         while not self.close_event.is_set():
-            logger.debug(self.close_event)
             # Retrieve socket events
             events = self.sel.select()
 
