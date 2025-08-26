@@ -1,0 +1,371 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>p4lantir.mitm.proxy_server &mdash; p4lantir  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=2da93098" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Content:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../structure.html">Structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Documentation - API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">p4lantir</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">p4lantir.mitm.proxy_server</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for p4lantir.mitm.proxy_server</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">socketserver</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">selectors</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">CONFIG</span>
+
+
+<div class="viewcode-block" id="Server">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Server</span><span class="p">(</span><span class="n">socketserver</span><span class="o">.</span><span class="n">BaseRequestHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    TCP Proxy/relay server for Man-in-the-Middle attacks.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">BUFF_SIZE</span> <span class="o">=</span> <span class="mi">4096</span>
+    <span class="n">REDIRECT_IP</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">REDIRECT_PORT</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">logger</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">block_event</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">drop_event</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">forward_event</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">receive_event</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">message_queue</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">BLOCK_MESSAGE</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Packet blocked (&#39;</span><span class="si">{</span><span class="n">CONFIG</span><span class="p">[</span><span class="s1">&#39;SEE_KEY&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; to see it)&quot;</span>
+
+<div class="viewcode-block" id="Server.handle">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server.handle">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called method at each initiated connexion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Init logger</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;server&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Opening connection for client </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">client_address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">close_socket</span><span class="p">(</span><span class="s2">&quot;client&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Connect to the spoofed server</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">open_connexion_to_server</span><span class="p">()</span>
+
+        <span class="c1"># Register socket selector to handle</span>
+        <span class="c1"># incoming packets in both directions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sel</span> <span class="o">=</span> <span class="n">selectors</span><span class="o">.</span><span class="n">DefaultSelector</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sel</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
+            <span class="n">selectors</span><span class="o">.</span><span class="n">EVENT_READ</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="s2">&quot;client&quot;</span><span class="p">,</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="s2">&quot;server&quot;</span><span class="p">},</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sel</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="p">,</span>
+            <span class="n">selectors</span><span class="o">.</span><span class="n">EVENT_READ</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="s2">&quot;server&quot;</span><span class="p">,</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="s2">&quot;client&quot;</span><span class="p">},</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Sockets must be set as non blocking</span>
+        <span class="c1"># for it to work</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+            <span class="c1"># Retrieve socket events</span>
+            <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sel</span><span class="o">.</span><span class="n">select</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">mask</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+                <span class="c1"># setup client socket connection</span>
+                <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Got none data&quot;</span><span class="p">)</span>
+
+                <span class="c1"># If incomming packets</span>
+                <span class="k">elif</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="n">selectors</span><span class="o">.</span><span class="n">EVENT_READ</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Read event !&quot;</span><span class="p">)</span>
+                    
+                    <span class="c1"># Receive data from client or server</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">recv_from</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">])</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">message_queue</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">message_queue</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                    
+                    <span class="c1"># If nothing, then close the sockets</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">close_sockets</span><span class="p">()</span>
+                        <span class="k">return</span>
+
+                    <span class="c1"># Else, handle the incoming packets</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># If block packets, display help message</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">BLOCK_MESSAGE</span>
+                            <span class="p">)</span>
+
+                        <span class="c1"># Wait until a user action/unblock</span>
+                        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+                            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+                            <span class="c1"># Close sockets</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">close_sockets</span><span class="p">()</span>
+                                <span class="k">return</span>
+
+                            <span class="c1"># Exit if an action is taken by user</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">drop_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">()</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+                                <span class="k">break</span>
+
+                        <span class="c1"># If the user wants to drop</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">drop_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">drop_event</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+                            <span class="c1"># Log with a &lt;DROPPED&gt; prefix</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">log_transfer</span><span class="p">(</span>
+                                <span class="n">src</span><span class="o">=</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+                                <span class="n">dst</span><span class="o">=</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">],</span>
+                                <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                                <span class="n">note</span><span class="o">=</span><span class="n">CONFIG</span><span class="p">[</span><span class="s2">&quot;DROPPED_NOTE&quot;</span><span class="p">])</span>
+
+                        <span class="c1"># Otherwise, forward it</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Sending message to </span><span class="si">{</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;to&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+
+                            <span class="c1"># Forward to right direction</span>
+                            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;client&quot;</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+                            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Sended message to </span><span class="si">{</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;to&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+
+                            <span class="c1"># Print the forwarded message</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">log_transfer</span><span class="p">(</span>
+                                <span class="n">src</span><span class="o">=</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+                                <span class="n">dst</span><span class="o">=</span><span class="n">key</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">],</span>
+                                <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                                <span class="n">note</span><span class="o">=</span><span class="n">CONFIG</span><span class="p">[</span><span class="s2">&quot;FORWARDED_NOTE&quot;</span><span class="p">]</span> \
+                                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+                            <span class="bp">self</span><span class="o">.</span><span class="n">forward_event</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.001</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;End of interception&quot;</span><span class="p">)</span>
+        <span class="c1"># Ferme la connection avec le serveur</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_sockets</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Server.open_connexion_to_server">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server.open_connexion_to_server">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">open_connexion_to_server</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Open a TCP connection with the spoofed server to forward/receive packets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Opening connection to server at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">REDIRECT_IP</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">REDIRECT_PORT</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">REDIRECT_IP</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">REDIRECT_PORT</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Server.recv_from">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server.recv_from">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">recv_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive a message over TCP from the client or the server</span>
+
+<span class="sd">        :param src: Source of the incoming packets</span>
+<span class="sd">        :type src: str</span>
+<span class="sd">        :return: Received data</span>
+<span class="sd">        :rtype: bytes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">recv</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">src</span> <span class="o">==</span> <span class="s2">&quot;client&quot;</span><span class="p">:</span>
+            <span class="n">recv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">BUFF_SIZE</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">src</span> <span class="o">==</span> <span class="s2">&quot;server&quot;</span><span class="p">:</span>
+            <span class="n">recv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">BUFF_SIZE</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknow dest, must be &#39;client&#39; or &#39;server&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">recv</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Nothing received from </span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Received from </span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">recv</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">recv</span></div>
+
+
+<div class="viewcode-block" id="Server.close_socket">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server.close_socket">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_socket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">socket_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close a socket, either the server&#39;s one or the client&#39;s one.</span>
+
+<span class="sd">        :param socket_name: le name of the socket to close (client/server)</span>
+<span class="sd">        :type socket_name: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">socket_name</span> <span class="o">==</span> <span class="s2">&quot;client&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Closing client&#39;s socket&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SHUT_RDWR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">socket_name</span> <span class="o">==</span> <span class="s2">&quot;server&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Closing server&#39;s socket&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SHUT_RDWR</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknow dest, must be &#39;client&#39; or &#39;server&#39;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Server.close_sockets">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server.close_sockets">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_sockets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close both client&#39;s and server&#39;s opened socket</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Closing connections&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_socket</span><span class="p">(</span><span class="s2">&quot;server&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_socket</span><span class="p">(</span><span class="s2">&quot;client&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Server.log_transfer">
+<a class="viewcode-back" href="../../../p4lantir.mitm.proxy_server.html#p4lantir.mitm.proxy_server.Server.log_transfer">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">log_transfer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Log the received and then forwarded/dropper packets in a fancy way.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">note</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">dst</span><span class="si">}</span><span class="s2">) : </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">dst</span><span class="si">}</span><span class="s2">) : </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span><span class="si">}</span><span class="se">\t</span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">note</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">dst</span><span class="si">}</span><span class="s2">) : </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">note</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">dst</span><span class="si">}</span><span class="s2">) : </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span><span class="si">}</span><span class="se">\t</span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, acmo0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    <span class="fa fa-book"> Other Versions</span>
+    v: 1.0.2
+    <span class="fa fa-caret-down"></span>
+  </span>
+  <div class="rst-other-versions">
+    <dl>
+      <dt>Tags</dt>
+      <dd><a href="proxy_server.html">1.0.2</a></dd>
+    </dl>
+  </div>
+</div><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
